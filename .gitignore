@@ -1,0 +1,13 @@
+# Dependencies - never commit these, npm install recreates them
+node_modules/
+
+# Environment variables - contains secret API keys
+.env
+
+# OS junk files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
