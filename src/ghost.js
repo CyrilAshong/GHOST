@@ -1,13 +1,11 @@
 // src/ghost.js
-//
-// Ghost's core engine.
-// Manages both text mode and voice mode.
 
 import readline from "readline";
 import { chat } from "./ai/openai.js";
 import { createConversation } from "./chat/conversation.js";
 import { speak } from "./voice/tts.js";
 import { listenAndTranscribe } from "./voice/stt.js";
+import { detectAndRunTool } from "./tools/index.js";
 
 const GHOST_SYSTEM_PROMPT = `
 You are Ghost — a highly intelligent desktop AI assistant with a sharp wit and an even sharper tongue.
@@ -38,13 +36,10 @@ YOUR BOUNDARIES:
 - If you do not know something you admit it — but with style. Never make things up.
 
 REMEMBER:
-You are Ghost. Not a generic assistant. Not a chatbot. 
+You are Ghost. Not a generic assistant. Not a chatbot.
 You are the AI that actually has a personality worth talking to.
 `;
 
-/**
- * Text mode — original Phase 1 terminal interface
- */
 export async function startTextMode() {
   const conversation = createConversation(GHOST_SYSTEM_PROMPT);
 
@@ -58,7 +53,7 @@ export async function startTextMode() {
     console.log();
   }
 
-  function promptUser() {
+  async function promptUser() {
     rl.question("You: ", async (input) => {
       const userMessage = input.trim();
       if (!userMessage) { promptUser(); return; }
@@ -75,12 +70,24 @@ export async function startTextMode() {
         return;
       }
 
-      conversation.addMessage("user", userMessage);
-      process.stdout.write("Ghost: thinking...");
-      const response = await chat(conversation.getMessages());
-      process.stdout.write("\r" + " ".repeat(20) + "\r");
-      print(`Ghost: ${response}`);
-      conversation.addMessage("assistant", response);
+      // Check tools first before calling DeepSeek
+      const toolResult = await detectAndRunTool(userMessage);
+
+      if (toolResult) {
+        // A tool handled this message
+        print(`Ghost: ${toolResult}`);
+        conversation.addMessage("user", userMessage);
+        conversation.addMessage("assistant", toolResult);
+      } else {
+        // No tool matched — send to DeepSeek
+        conversation.addMessage("user", userMessage);
+        process.stdout.write("Ghost: thinking...");
+        const response = await chat(conversation.getMessages());
+        process.stdout.write("\r" + " ".repeat(20) + "\r");
+        print(`Ghost: ${response}`);
+        conversation.addMessage("assistant", response);
+      }
+
       promptUser();
     });
   }
@@ -90,9 +97,6 @@ export async function startTextMode() {
   promptUser();
 }
 
-/**
- * Voice mode — speak to Ghost and hear it respond
- */
 export async function startVoiceMode() {
   const conversation = createConversation(GHOST_SYSTEM_PROMPT);
 
@@ -114,7 +118,6 @@ export async function startVoiceMode() {
       }
 
       try {
-        // Step 1: Listen and transcribe
         const userMessage = await listenAndTranscribe();
 
         if (!userMessage) {
@@ -123,17 +126,22 @@ export async function startVoiceMode() {
           return;
         }
 
-        // Step 2: Get AI response
-        conversation.addMessage("user", userMessage);
-        process.stdout.write("\nGhost: thinking...\n");
-        const response = await chat(conversation.getMessages());
+        // Check tools first before calling DeepSeek
+        const toolResult = await detectAndRunTool(userMessage);
 
-        // Step 3: Print and speak the response
-        console.log(`\nGhost: ${response}\n`);
-        await speak(response);
-
-        // Step 4: Save to conversation history
-        conversation.addMessage("assistant", response);
+        if (toolResult) {
+          console.log(`\nGhost: ${toolResult}\n`);
+          await speak(toolResult);
+          conversation.addMessage("user", userMessage);
+          conversation.addMessage("assistant", toolResult);
+        } else {
+          conversation.addMessage("user", userMessage);
+          process.stdout.write("\nGhost: thinking...\n");
+          const response = await chat(conversation.getMessages());
+          console.log(`\nGhost: ${response}\n`);
+          await speak(response);
+          conversation.addMessage("assistant", response);
+        }
 
       } catch (error) {
         console.error("Error:", error.message);
