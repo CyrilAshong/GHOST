@@ -4,11 +4,12 @@
   "description": "A smart desktop AI assistant",
   "main": "src/index.js",
   "type": "module",
-  "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+ "scripts": {
+  "start": "node src/index.js",
+  "voice": "node src/index.js --voice",
+  "dev": "node --watch src/index.js",
+  "dev:voice": "node --watch src/index.js --voice"
+},
   "keywords": [],
   "author": "Cyril Nii Otu Ashong",
   "license": "ISC",
