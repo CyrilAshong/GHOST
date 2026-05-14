@@ -12,7 +12,7 @@ Built phase by phase with clean architecture and real engineering practices.
 |---|---|---|
 | Phase 1 | Terminal text assistant | ✅ Complete |
 | Phase 2 | Voice assistant | ✅ Complete |
-| Phase 3 | System automation | 🔜 Coming soon |
+| Phase 3 | System automation | ✅ Complete |
 | Phase 4 | Wake word detection | 🔜 Coming soon |
 | Phase 5 | Desktop GUI with Electron | 🔜 Coming soon |
 | Phase 6 | Memory and personalization | 🔜 Coming soon |
@@ -28,7 +28,11 @@ Built phase by phase with clean architecture and real engineering practices.
 - Listen to your voice through the microphone
 - Transcribe your speech using Google Speech Recognition
 - Speak responses out loud using pyttsx3
-- Run in text mode or voice mode from the terminal
+- Open applications including Chrome, Spotify, Telegram, VSCode and Word
+- Tell you the current time and date
+- Check your battery level
+- Run terminal commands
+- Search for files on your computer
 
 ---
 
@@ -107,8 +111,11 @@ Example:
 ```
 Ghost [Text Mode] — type your message. 'exit' to quit.
 ──────────────────────────────────────────────────
-You: What is the capital of France?
-Ghost: Paris.
+You: What time is it?
+Ghost: It is 10:45:30 on Thursday, 14 May 2026.
+
+You: Open Spotify
+Ghost: Opening Spotify now.
 
 You: exit
 Ghost: Goodbye.
@@ -134,9 +141,9 @@ Press Enter to speak (or type 'exit'):
 🔴 Listening... Speak now!
 ✅ Got it.
 🔄 Transcribing...
-📝 You said: "Hello Ghost how are you"
+📝 You said: "Open Chrome"
 
-Ghost: I am doing well. How can I help you today?
+Ghost: Opening Chrome now.
 ```
 
 ### Development Mode
@@ -162,6 +169,13 @@ ghost/
 │   ├── voice/
 │   │   ├── tts.js               — text to speech module
 │   │   └── stt.js               — speech to text module
+│   ├── tools/
+│   │   ├── index.js             — tool registry and intent classifier
+│   │   ├── openApp.js           — opens applications
+│   │   ├── runCommand.js        — runs terminal commands
+│   │   ├── getTime.js           — returns current time and date
+│   │   ├── getBattery.js        — returns battery level
+│   │   └── searchFiles.js       — searches for files
 │   ├── ghost.js                 — core engine, wires everything together
 │   └── index.js                 — entry point, starts the correct mode
 ├── scripts/
@@ -184,6 +198,7 @@ ghost/
 | Speech Recognition | Google Speech Recognition | Converts voice to text |
 | Text to Speech | pyttsx3 | Converts text to spoken audio |
 | Audio Recording | sounddevice | Captures microphone input |
+| System Automation | Node.js child_process | Opens apps and runs commands |
 | Version Control | Git and GitHub | Tracks changes and backs up code |
 | Desktop GUI | Electron | Coming in Phase 5 |
 | Database | PostgreSQL and Prisma | Coming in Phase 6 |
@@ -198,6 +213,40 @@ ghost/
 | npm run voice | Start Ghost in voice mode |
 | npm run dev | Text mode with auto restart on file changes |
 | npm run dev:voice | Voice mode with auto restart on file changes |
+
+---
+
+## Ghost Commands
+
+### Open Applications
+```
+Open Chrome
+Open Spotify
+Open Telegram
+Open VSCode
+Open Word
+Open Notepad
+Open Calculator
+Open File Explorer
+```
+
+### System Information
+```
+What time is it
+What is my battery level
+```
+
+### Run Terminal Commands
+```
+Run ipconfig
+Run dir
+```
+
+### Search Files
+```
+Find file resume
+Search for notes
+```
 
 ---
 
@@ -217,6 +266,11 @@ requires no local model downloads, and works reliably across platforms.
 Python has mature, stable audio libraries that work reliably on Windows.
 Node.js audio libraries frequently have native dependency issues on Windows.
 Ghost uses Node.js for all application logic and Python only for audio tasks.
+
+### Why a tool registry pattern?
+Each tool is its own module with one job. Adding a new tool means
+creating one file and registering it in index.js. Nothing else changes.
+This makes the tool system infinitely expandable.
 
 ### Why separate files for each concern?
 Each module has one job. When we swap a technology in a future phase
@@ -248,6 +302,10 @@ Google processes the audio on their servers.
 ### ffmpeg not found
 Make sure you added the correct path to your system PATH
 and restarted your terminal after doing so.
+
+### App will not open
+The app may be installed in a custom location. Find the exe path
+and add it manually to the APP_MAP in src/tools/openApp.js.
 
 ---
 
