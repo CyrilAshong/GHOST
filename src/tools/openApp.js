@@ -2,10 +2,10 @@
 //
 // Opens applications on Windows.
 // Maps friendly names to their executable commands.
+// Execution is delayed slightly so Ghost can speak first.
 
 import { exec } from "child_process";
 
-// Map of friendly app names to their Windows commands.
 const APP_MAP = {
   // Browsers
   chrome: "start chrome",
@@ -43,15 +43,14 @@ const APP_MAP = {
 
 /**
  * Opens an application by name.
+ * The app opens after a short delay so Ghost can speak first.
+ *
  * @param {string} appName - The name of the app to open
  * @returns {Promise<string>} - Result message
  */
 export function openApp(appName) {
   return new Promise((resolve) => {
-    // Normalize the app name to lowercase for matching
     const normalized = appName.toLowerCase().trim();
-
-    // Find the command for this app
     const command = APP_MAP[normalized];
 
     if (!command) {
@@ -61,13 +60,17 @@ export function openApp(appName) {
       return;
     }
 
-    // Execute the command to open the app
-    exec(command, (error) => {
-      if (error) {
-        resolve(`I tried to open ${appName} but something went wrong. Make sure it is installed.`);
-      } else {
-        resolve(`Opening ${appName} now.`);
-      }
-    });
+    // Resolve immediately with the message so Ghost can speak first
+    // Then open the app after a short delay
+    // 2000ms gives Ghost enough time to finish speaking before the app opens
+    resolve(`Opening ${appName} now.`);
+
+    setTimeout(() => {
+      exec(command, (error) => {
+        if (error) {
+          console.error(`Failed to open ${appName}:`, error.message);
+        }
+      });
+    }, 2000);
   });
 }

@@ -1,4 +1,7 @@
 // src/ghost.js
+//
+// Ghost's core engine.
+// Manages both text mode and voice mode.
 
 import readline from "readline";
 import { chat } from "./ai/openai.js";
@@ -130,6 +133,8 @@ export async function startVoiceMode() {
         const toolResult = await detectAndRunTool(userMessage);
 
         if (toolResult) {
+          // Speak first, then execute the action
+          // This way Ghost announces what it is doing before doing it
           console.log(`\nGhost: ${toolResult}\n`);
           await speak(toolResult);
           conversation.addMessage("user", userMessage);
