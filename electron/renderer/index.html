@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ghost</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ── TITLE BAR ── -->
+  <!-- drag-region allows the user to drag the window by this bar -->
+  <div class="title-bar" id="titleBar">
+    <div class="title-bar-left">
+      <div class="ghost-orb"></div>
+      <span class="title-text">Ghost</span>
+    </div>
+    <div class="title-bar-controls">
+      <button class="control-btn minimize" id="minimizeBtn">─</button>
+      <button class="control-btn close" id="closeBtn">✕</button>
+    </div>
+  </div>
+
+  <!-- ── STATUS BAR ── -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">Say Hey Ghost to activate</span>
+  </div>
+
+  <!-- ── CHAT WINDOW ── -->
+  <div class="chat-window" id="chatWindow">
+
+    <!-- Welcome message -->
+    <div class="message ghost-message">
+      <div class="message-bubble">
+        Hey. Ghost online. Say something or type below.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── THINKING INDICATOR ── -->
+  <div class="thinking-indicator" id="thinkingIndicator">
+    <div class="thinking-dot"></div>
+    <div class="thinking-dot"></div>
+    <div class="thinking-dot"></div>
+  </div>
+
+  <!-- ── INPUT BAR ── -->
+  <div class="input-bar">
+    <input
+      type="text"
+      class="message-input"
+      id="messageInput"
+      placeholder="Type a message..."
+      autocomplete="off"
+    />
+    <button class="mic-btn" id="micBtn" title="Voice input">
+      🎤
+    </button>
+    <button class="send-btn" id="sendBtn" title="Send">
+      ➤
+    </button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
