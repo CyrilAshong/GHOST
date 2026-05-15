@@ -1,7 +1,7 @@
 // src/ghost.js
 //
 // Ghost's core engine.
-// Manages both text mode and voice mode.
+// Manages text mode, voice mode, and wake word mode.
 
 import readline from "readline";
 import { chat } from "./ai/openai.js";
@@ -9,6 +9,7 @@ import { createConversation } from "./chat/conversation.js";
 import { speak } from "./voice/tts.js";
 import { listenAndTranscribe } from "./voice/stt.js";
 import { detectAndRunTool } from "./tools/index.js";
+import { startWakeWordListener } from "./voice/wakeWord.js";
 
 const GHOST_SYSTEM_PROMPT = `
 You are Ghost — a highly intelligent desktop AI assistant with a sharp wit and an even sharper tongue.
@@ -43,6 +44,42 @@ You are Ghost. Not a generic assistant. Not a chatbot.
 You are the AI that actually has a personality worth talking to.
 `;
 
+/**
+ * Handles a message from the user.
+ * Checks tools first then falls back to DeepSeek.
+ * Used by all three modes.
+ *
+ * @param {string} userMessage   - What the user said or typed
+ * @param {object} conversation  - The conversation history manager
+ * @param {boolean} shouldSpeak  - Whether Ghost should speak the response
+ */
+async function handleMessage(userMessage, conversation, shouldSpeak = false) {
+  // Check if the message matches a tool first
+  const toolResult = await detectAndRunTool(userMessage);
+
+  if (toolResult) {
+    // A tool handled this — speak first then act
+    console.log(`\nGhost: ${toolResult}\n`);
+    if (shouldSpeak) await speak(toolResult);
+    conversation.addMessage("user", userMessage);
+    conversation.addMessage("assistant", toolResult);
+  } else {
+    // No tool matched — send to DeepSeek
+    conversation.addMessage("user", userMessage);
+    process.stdout.write("\nGhost: thinking...\n");
+    const response = await chat(conversation.getMessages());
+    console.log(`\nGhost: ${response}\n`);
+    if (shouldSpeak) await speak(response);
+    conversation.addMessage("assistant", response);
+  }
+}
+
+// ── TEXT MODE ──────────────────────────────────────────────────────────────
+
+/**
+ * Text mode — original Phase 1 terminal interface.
+ * User types messages and Ghost responds in text.
+ */
 export async function startTextMode() {
   const conversation = createConversation(GHOST_SYSTEM_PROMPT);
 
@@ -59,30 +96,35 @@ export async function startTextMode() {
   async function promptUser() {
     rl.question("You: ", async (input) => {
       const userMessage = input.trim();
-      if (!userMessage) { promptUser(); return; }
 
+      // Ignore empty input
+      if (!userMessage) {
+        promptUser();
+        return;
+      }
+
+      // Exit commands
       if (["exit", "quit"].includes(userMessage.toLowerCase())) {
         print("Ghost: Goodbye.");
         rl.close();
         process.exit(0);
       }
 
+      // Clear conversation history
       if (userMessage.toLowerCase() === "clear") {
         conversation.clear();
         promptUser();
         return;
       }
 
-      // Check tools first before calling DeepSeek
+      // Check tools first then DeepSeek
       const toolResult = await detectAndRunTool(userMessage);
 
       if (toolResult) {
-        // A tool handled this message
         print(`Ghost: ${toolResult}`);
         conversation.addMessage("user", userMessage);
         conversation.addMessage("assistant", toolResult);
       } else {
-        // No tool matched — send to DeepSeek
         conversation.addMessage("user", userMessage);
         process.stdout.write("Ghost: thinking...");
         const response = await chat(conversation.getMessages());
@@ -100,6 +142,12 @@ export async function startTextMode() {
   promptUser();
 }
 
+// ── VOICE MODE ─────────────────────────────────────────────────────────────
+
+/**
+ * Voice mode — press Enter to speak.
+ * Ghost listens, transcribes, responds, and speaks.
+ */
 export async function startVoiceMode() {
   const conversation = createConversation(GHOST_SYSTEM_PROMPT);
 
@@ -114,6 +162,7 @@ export async function startVoiceMode() {
   const waitForInput = () => {
     rl.question("\nPress Enter to speak (or type 'exit'): ", async (input) => {
 
+      // Allow typing exit
       if (input.trim().toLowerCase() === "exit") {
         await speak("Goodbye.");
         rl.close();
@@ -121,6 +170,7 @@ export async function startVoiceMode() {
       }
 
       try {
+        // Listen and transcribe
         const userMessage = await listenAndTranscribe();
 
         if (!userMessage) {
@@ -129,27 +179,11 @@ export async function startVoiceMode() {
           return;
         }
 
-        // Check tools first before calling DeepSeek
-        const toolResult = await detectAndRunTool(userMessage);
-
-        if (toolResult) {
-          // Speak first, then execute the action
-          // This way Ghost announces what it is doing before doing it
-          console.log(`\nGhost: ${toolResult}\n`);
-          await speak(toolResult);
-          conversation.addMessage("user", userMessage);
-          conversation.addMessage("assistant", toolResult);
-        } else {
-          conversation.addMessage("user", userMessage);
-          process.stdout.write("\nGhost: thinking...\n");
-          const response = await chat(conversation.getMessages());
-          console.log(`\nGhost: ${response}\n`);
-          await speak(response);
-          conversation.addMessage("assistant", response);
-        }
+        // Handle the message — speak the response
+        await handleMessage(userMessage, conversation, true);
 
       } catch (error) {
-        console.error("Error:", error.message);
+        console.error("Voice error:", error.message);
       }
 
       waitForInput();
@@ -157,4 +191,44 @@ export async function startVoiceMode() {
   };
 
   waitForInput();
+}
+
+// ── WAKE WORD MODE ─────────────────────────────────────────────────────────
+
+/**
+ * Wake word mode — always listening for "Hey Ghost".
+ * Ghost stays awake after activation and keeps listening
+ * naturally until the user goes quiet or says they are done.
+ */
+export async function startWakeMode() {
+  const conversation = createConversation(GHOST_SYSTEM_PROMPT);
+
+  console.log("\nGhost [Wake Word Mode] — Say 'Hey Ghost' to activate.");
+  console.log("Say 'I'm done' or 'Goodbye' to end the conversation.");
+  console.log("Press Ctrl+C to quit.");
+  console.log("─".repeat(50));
+
+  startWakeWordListener(
+    // onDetected — wake word heard, chime played, Ghost is awake
+    async () => {
+      console.log("\n👻 Ghost is awake...\n");
+      await speak("Yeah, what's up.");
+    },
+
+    // onCommand — user said something
+    async (command) => {
+      console.log(`📝 You: "${command}"`);
+      await handleMessage(command, conversation, true);
+    },
+
+    // onSleeping — session ended naturally or by user
+    async () => {
+      console.log("\n👻 Going back to sleep...\n");
+      await speak("Alright, catch you later.");
+      conversation.clear();
+    },
+
+    // onPrompt — not used anymore, passed as null
+    async () => {}
+  );
 }
