@@ -2,21 +2,26 @@
   "name": "ghost",
   "version": "1.0.0",
   "description": "A smart desktop AI assistant",
-  "main": "src/index.js",
+  "main": "electron/main.js",
   "type": "module",
- "scripts": {
-  "start": "node src/index.js",
-  "voice": "node src/index.js --voice",
-  "wake": "node src/index.js --wake",
-  "dev": "node --watch src/index.js",
-  "dev:voice": "node --watch src/index.js --voice",
-  "dev:wake": "node --watch src/index.js --wake"
-},
-  "keywords": [],
-  "author": "Cyril Nii Otu Ashong",
+  "scripts": {
+    "start": "node src/index.js",
+    "voice": "node src/index.js --voice",
+    "wake": "node src/index.js --wake",
+    "dev": "node --watch src/index.js",
+    "dev:voice": "node --watch src/index.js --voice",
+    "dev:wake": "node --watch src/index.js --wake",
+    "gui": "electron electron/main.js",
+    "dev:gui": "electron --inspect electron/main.js"
+  },
+  "author": "Cyril Ashong",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "openai": "^6.37.0"
+    "dotenv": "^16.0.0",
+    "node-record-lpcm16": "^1.0.1",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "electron": "^36.0.0"
   }
 }
