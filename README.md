@@ -13,7 +13,7 @@ Built phase by phase with clean architecture and real engineering practices.
 | Phase 1 | Terminal text assistant | ✅ Complete |
 | Phase 2 | Voice assistant | ✅ Complete |
 | Phase 3 | System automation | ✅ Complete |
-| Phase 4 | Wake word detection | 🔜 Coming soon |
+| Phase 4 | Wake word detection | ✅ Complete |
 | Phase 5 | Desktop GUI with Electron | 🔜 Coming soon |
 | Phase 6 | Memory and personalization | 🔜 Coming soon |
 | Phase 7 | Local AI support | 🔜 Coming soon |
@@ -33,6 +33,10 @@ Built phase by phase with clean architecture and real engineering practices.
 - Check your battery level
 - Run terminal commands
 - Search for files on your computer
+- Wake up automatically when you say Hey Ghost
+- Stay awake and hold a full natural conversation
+- Go back to sleep after 1 minute of inactivity or when told to
+- Play a cinematic Titan chime when activated
 
 ---
 
@@ -111,8 +115,8 @@ Example:
 ```
 Ghost [Text Mode] — type your message. 'exit' to quit.
 ──────────────────────────────────────────────────
-You: What time is it?
-Ghost: It is 10:45:30 on Thursday, 14 May 2026.
+You: What is the capital of France?
+Ghost: Paris.
 
 You: Open Spotify
 Ghost: Opening Spotify now.
@@ -146,6 +150,41 @@ Press Enter to speak (or type 'exit'):
 Ghost: Opening Chrome now.
 ```
 
+### Wake Word Mode
+
+Ghost listens continuously in the background.
+Say Hey Ghost to activate it then have a full natural conversation.
+Ghost stays awake until you say goodbye or go quiet for 1 minute.
+
+```
+npm run wake
+```
+
+Example:
+
+```
+Ghost [Wake Word Mode] — Say 'Hey Ghost' to activate.
+Say 'I'm done' or 'Goodbye' to end the conversation.
+Press Ctrl+C to quit.
+──────────────────────────────────────────────────
+👻 Ghost is listening for wake word...
+
+✅ Wake word detected!
+
+Ghost: Yeah, what's up.
+
+📝 You: "What time is it"
+Ghost: It is 10:45:30 on Thursday, 15 May 2026.
+
+📝 You: "Open Spotify"
+Ghost: Opening Spotify now.
+
+📝 You: "I'm done"
+Ghost: Alright, catch you later.
+
+👻 Ghost is listening for wake word...
+```
+
 ### Development Mode
 
 Automatically restarts Ghost when you save changes.
@@ -153,6 +192,7 @@ Automatically restarts Ghost when you save changes.
 ```
 npm run dev
 npm run dev:voice
+npm run dev:wake
 ```
 
 ---
@@ -168,7 +208,8 @@ ghost/
 │   │   └── conversation.js      — manages conversation history
 │   ├── voice/
 │   │   ├── tts.js               — text to speech module
-│   │   └── stt.js               — speech to text module
+│   │   ├── stt.js               — speech to text module
+│   │   └── wakeWord.js          — wake word listener
 │   ├── tools/
 │   │   ├── index.js             — tool registry and intent classifier
 │   │   ├── openApp.js           — opens applications
@@ -180,7 +221,9 @@ ghost/
 │   └── index.js                 — entry point, starts the correct mode
 ├── scripts/
 │   ├── speak.py                 — pyttsx3 text to speech script
-│   └── listen.py                — Google Speech Recognition script
+│   ├── listen.py                — Google Speech Recognition script
+│   ├── wake.py                  — wake word detection script
+│   └── chime.py                 — Titan wake sound generator
 ├── .env                         — API keys, never committed to Git
 ├── .gitignore                   — files Git ignores
 ├── package.json                 — Node.js project config and scripts
@@ -198,6 +241,8 @@ ghost/
 | Speech Recognition | Google Speech Recognition | Converts voice to text |
 | Text to Speech | pyttsx3 | Converts text to spoken audio |
 | Audio Recording | sounddevice | Captures microphone input |
+| Wake Word | Google Speech Recognition | Detects Hey Ghost trigger |
+| Wake Sound | numpy and sounddevice | Generates cinematic Titan chime |
 | System Automation | Node.js child_process | Opens apps and runs commands |
 | Version Control | Git and GitHub | Tracks changes and backs up code |
 | Desktop GUI | Electron | Coming in Phase 5 |
@@ -211,8 +256,10 @@ ghost/
 |---|---|
 | npm start | Start Ghost in text mode |
 | npm run voice | Start Ghost in voice mode |
+| npm run wake | Start Ghost in wake word mode |
 | npm run dev | Text mode with auto restart on file changes |
 | npm run dev:voice | Voice mode with auto restart on file changes |
+| npm run dev:wake | Wake word mode with auto restart on file changes |
 
 ---
 
@@ -248,6 +295,21 @@ Find file resume
 Search for notes
 ```
 
+### Wake Word
+```
+Hey Ghost
+Hey Google  (Google sometimes mishears Hey Ghost as this)
+```
+
+### End a Wake Word Session
+```
+I'm done
+Goodbye
+That's all
+Sleep
+Bye
+```
+
 ---
 
 ## Architecture Decisions
@@ -258,9 +320,9 @@ Its API is fully compatible with the OpenAI SDK format so switching
 required changing only one file.
 
 ### Why Google Speech Recognition instead of Whisper?
-Whisper requires ffmpeg and runs locally which caused compatibility
-issues on Windows. Google Speech Recognition is faster, more accurate,
-requires no local model downloads, and works reliably across platforms.
+Whisper required ffmpeg and caused compatibility issues on Windows.
+Google Speech Recognition is faster, more accurate, requires no local
+model downloads, and works reliably across platforms.
 
 ### Why Python for audio?
 Python has mature, stable audio libraries that work reliably on Windows.
@@ -272,9 +334,15 @@ Each tool is its own module with one job. Adding a new tool means
 creating one file and registering it in index.js. Nothing else changes.
 This makes the tool system infinitely expandable.
 
-### Why separate files for each concern?
-Each module has one job. When we swap a technology in a future phase
-we change one file and nothing else breaks. This is called separation of concerns.
+### Why numpy for the wake sound?
+Generating audio mathematically means no sound files to manage or commit.
+The chime is created from scratch using sine waves, reverb, and envelopes.
+It can be fully customized in code.
+
+### Why does Ghost stay awake after the wake word?
+A real conversation does not stop after one sentence. Ghost stays awake
+and listens naturally until the user says goodbye or goes quiet for
+1 minute. This makes it feel like talking to a person not a voice assistant.
 
 ---
 
@@ -299,9 +367,14 @@ in Windows Sound Settings.
 Make sure you are connected to the internet.
 Google processes the audio on their servers.
 
-### ffmpeg not found
-Make sure you added the correct path to your system PATH
-and restarted your terminal after doing so.
+### Wake word not triggering
+Speak clearly and say Hey Ghost slowly.
+Google sometimes transcribes it as Hey Google which also works.
+Watch the terminal to see exactly what Google is hearing.
+
+### Ghost goes back to sleep too quickly
+Ghost waits 1 minute of real silence before sleeping.
+Make sure you are speaking clearly after Ghost finishes responding.
 
 ### App will not open
 The app may be installed in a custom location. Find the exe path
