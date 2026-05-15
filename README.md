@@ -14,7 +14,7 @@ Built phase by phase with clean architecture and real engineering practices.
 | Phase 2 | Voice assistant | ✅ Complete |
 | Phase 3 | System automation | ✅ Complete |
 | Phase 4 | Wake word detection | ✅ Complete |
-| Phase 5 | Desktop GUI with Electron | 🔜 Coming soon |
+| Phase 5 | Desktop GUI with Electron | ✅ Complete |
 | Phase 6 | Memory and personalization | 🔜 Coming soon |
 | Phase 7 | Local AI support | 🔜 Coming soon |
 | Phase 8 | Plugins and tool system | 🔜 Coming soon |
@@ -37,6 +37,10 @@ Built phase by phase with clean architecture and real engineering practices.
 - Stay awake and hold a full natural conversation
 - Go back to sleep after 1 minute of inactivity or when told to
 - Play a cinematic Titan chime when activated
+- Display a beautiful dark themed floating desktop window
+- Show live conversation history in the chat interface
+- Support both text and voice input from the GUI
+- Speak responses in voice mode but stay silent in text mode
 
 ---
 
@@ -102,27 +106,21 @@ To get your DeepSeek API key:
 
 ## Running Ghost
 
+### Desktop GUI Mode
+
+The main way to run Ghost. A floating dark window appears on your desktop.
+Supports text input, voice input, and wake word detection simultaneously.
+
+```
+npm run gui
+```
+
 ### Text Mode
 
 Ghost responds to messages you type in the terminal.
 
 ```
 npm start
-```
-
-Example:
-
-```
-Ghost [Text Mode] — type your message. 'exit' to quit.
-──────────────────────────────────────────────────
-You: What is the capital of France?
-Ghost: Paris.
-
-You: Open Spotify
-Ghost: Opening Spotify now.
-
-You: exit
-Ghost: Goodbye.
 ```
 
 ### Voice Mode
@@ -132,22 +130,6 @@ and speaks its response out loud.
 
 ```
 npm run voice
-```
-
-Example:
-
-```
-Ghost [Voice Mode] — Press Enter to speak. Type 'exit' to quit.
-──────────────────────────────────────────────────
-
-Press Enter to speak (or type 'exit'):
-🎙️  Preparing microphone...
-🔴 Listening... Speak now!
-✅ Got it.
-🔄 Transcribing...
-📝 You said: "Open Chrome"
-
-Ghost: Opening Chrome now.
 ```
 
 ### Wake Word Mode
@@ -160,31 +142,6 @@ Ghost stays awake until you say goodbye or go quiet for 1 minute.
 npm run wake
 ```
 
-Example:
-
-```
-Ghost [Wake Word Mode] — Say 'Hey Ghost' to activate.
-Say 'I'm done' or 'Goodbye' to end the conversation.
-Press Ctrl+C to quit.
-──────────────────────────────────────────────────
-👻 Ghost is listening for wake word...
-
-✅ Wake word detected!
-
-Ghost: Yeah, what's up.
-
-📝 You: "What time is it"
-Ghost: It is 10:45:30 on Thursday, 15 May 2026.
-
-📝 You: "Open Spotify"
-Ghost: Opening Spotify now.
-
-📝 You: "I'm done"
-Ghost: Alright, catch you later.
-
-👻 Ghost is listening for wake word...
-```
-
 ### Development Mode
 
 Automatically restarts Ghost when you save changes.
@@ -193,6 +150,7 @@ Automatically restarts Ghost when you save changes.
 npm run dev
 npm run dev:voice
 npm run dev:wake
+npm run dev:gui
 ```
 
 ---
@@ -201,6 +159,13 @@ npm run dev:wake
 
 ```
 ghost/
+├── electron/
+│   ├── main.js                  — Electron main process and window creation
+│   ├── preload.js               — bridge between main process and UI
+│   └── renderer/
+│       ├── index.html           — Ghost GUI layout
+│       ├── styles.css           — dark theme styles
+│       └── app.js               — UI logic and event handlers
 ├── src/
 │   ├── ai/
 │   │   └── openai.js            — DeepSeek AI chat integration
@@ -217,8 +182,8 @@ ghost/
 │   │   ├── getTime.js           — returns current time and date
 │   │   ├── getBattery.js        — returns battery level
 │   │   └── searchFiles.js       — searches for files
-│   ├── ghost.js                 — core engine, wires everything together
-│   └── index.js                 — entry point, starts the correct mode
+│   ├── ghost.js                 — core engine for terminal modes
+│   └── index.js                 — entry point for terminal modes
 ├── scripts/
 │   ├── speak.py                 — pyttsx3 text to speech script
 │   ├── listen.py                — Google Speech Recognition script
@@ -236,6 +201,8 @@ ghost/
 
 | Layer | Technology | Purpose |
 |---|---|---|
+| Desktop GUI | Electron | Floating desktop window |
+| UI Frontend | HTML CSS JavaScript | Chat interface and controls |
 | Runtime | Node.js | Core application runtime |
 | AI Chat | DeepSeek API | Generates intelligent responses |
 | Speech Recognition | Google Speech Recognition | Converts voice to text |
@@ -245,7 +212,6 @@ ghost/
 | Wake Sound | numpy and sounddevice | Generates cinematic Titan chime |
 | System Automation | Node.js child_process | Opens apps and runs commands |
 | Version Control | Git and GitHub | Tracks changes and backs up code |
-| Desktop GUI | Electron | Coming in Phase 5 |
 | Database | PostgreSQL and Prisma | Coming in Phase 6 |
 
 ---
@@ -254,12 +220,14 @@ ghost/
 
 | Command | Description |
 |---|---|
-| npm start | Start Ghost in text mode |
-| npm run voice | Start Ghost in voice mode |
-| npm run wake | Start Ghost in wake word mode |
-| npm run dev | Text mode with auto restart on file changes |
-| npm run dev:voice | Voice mode with auto restart on file changes |
-| npm run dev:wake | Wake word mode with auto restart on file changes |
+| npm run gui | Start Ghost desktop GUI |
+| npm start | Start Ghost in terminal text mode |
+| npm run voice | Start Ghost in terminal voice mode |
+| npm run wake | Start Ghost in terminal wake word mode |
+| npm run dev | Text mode with auto restart |
+| npm run dev:voice | Voice mode with auto restart |
+| npm run dev:wake | Wake word mode with auto restart |
+| npm run dev:gui | GUI mode with inspector |
 
 ---
 
@@ -314,6 +282,26 @@ Bye
 
 ## Architecture Decisions
 
+### Why Electron for the GUI?
+Electron lets us build a desktop application using web technologies we already know.
+VS Code, Slack, Discord, and Spotify desktop are all built with Electron.
+It gives Ghost a real native window without learning a completely new framework.
+
+### Why a floating frameless window?
+A frameless window gives Ghost a unique look that feels like a real AI assistant
+rather than a generic application. The window sits out of the way but is always accessible.
+
+### Why separate main and renderer processes?
+Electron enforces a security boundary between the main process and the UI.
+The main process has full system access. The UI runs in a sandboxed browser context.
+The preload bridge controls exactly what the UI is allowed to access.
+
+### Why does text mode not speak but voice mode does?
+When you type a message you can read the response in the chat window.
+Speaking it out loud as well would be redundant and annoying.
+When you use voice input or wake word you are not looking at the screen
+so Ghost speaks the response so you can hear it without looking.
+
 ### Why DeepSeek instead of OpenAI?
 DeepSeek offers competitive AI quality at significantly lower cost.
 Its API is fully compatible with the OpenAI SDK format so switching
@@ -329,21 +317,6 @@ Python has mature, stable audio libraries that work reliably on Windows.
 Node.js audio libraries frequently have native dependency issues on Windows.
 Ghost uses Node.js for all application logic and Python only for audio tasks.
 
-### Why a tool registry pattern?
-Each tool is its own module with one job. Adding a new tool means
-creating one file and registering it in index.js. Nothing else changes.
-This makes the tool system infinitely expandable.
-
-### Why numpy for the wake sound?
-Generating audio mathematically means no sound files to manage or commit.
-The chime is created from scratch using sine waves, reverb, and envelopes.
-It can be fully customized in code.
-
-### Why does Ghost stay awake after the wake word?
-A real conversation does not stop after one sentence. Ghost stays awake
-and listens naturally until the user says goodbye or goes quiet for
-1 minute. This makes it feel like talking to a person not a voice assistant.
-
 ---
 
 ## Environment Variables
@@ -355,6 +328,10 @@ and listens naturally until the user says goodbye or goes quiet for
 ---
 
 ## Common Issues
+
+### Ghost GUI does not open
+Make sure you ran npm install and that Electron is installed.
+Try running npm run dev:gui to see error messages.
 
 ### Ghost gives no response
 Check that your DEEPSEEK_API_KEY is correctly set in your .env file.
@@ -370,7 +347,6 @@ Google processes the audio on their servers.
 ### Wake word not triggering
 Speak clearly and say Hey Ghost slowly.
 Google sometimes transcribes it as Hey Google which also works.
-Watch the terminal to see exactly what Google is hearing.
 
 ### Ghost goes back to sleep too quickly
 Ghost waits 1 minute of real silence before sleeping.
