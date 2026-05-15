@@ -7,8 +7,10 @@
  "scripts": {
   "start": "node src/index.js",
   "voice": "node src/index.js --voice",
+  "wake": "node src/index.js --wake",
   "dev": "node --watch src/index.js",
-  "dev:voice": "node --watch src/index.js --voice"
+  "dev:voice": "node --watch src/index.js --voice",
+  "dev:wake": "node --watch src/index.js --wake"
 },
   "keywords": [],
   "author": "Cyril Nii Otu Ashong",
