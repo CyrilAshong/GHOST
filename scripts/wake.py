@@ -34,6 +34,7 @@ WAKE_WORDS = [
     "gay ghost",
     "hey post",
     "hey host",
+    "wake up",
 ]
 
 # ── SLEEP WORDS ────────────────────────────────────────────────────

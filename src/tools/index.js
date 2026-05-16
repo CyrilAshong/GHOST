@@ -21,12 +21,19 @@ export async function detectAndRunTool(message) {
   const msg = message.toLowerCase().trim();
 
   // ── TIME ──────────────────────────────────────────────
-  if (
+ if (
     msg.includes("what time") ||
     msg.includes("what's the time") ||
     msg.includes("current time") ||
     msg.includes("what date") ||
-    msg.includes("what day")
+    msg.includes("what day") ||
+    msg.includes("what is today") ||
+    msg.includes("today's date") ||
+    msg.includes("todays date") ||
+    msg.includes("what is the date") ||
+    msg.includes("current date") ||
+    msg.includes("what year") ||
+    msg.includes("what month")
   ) {
     return getTime();
   }

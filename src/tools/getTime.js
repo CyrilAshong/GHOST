@@ -1,7 +1,6 @@
 // src/tools/getTime.js
 //
 // Returns the current time and date.
-// No external dependencies needed — JavaScript handles this natively.
 
 /**
  * Returns the current time and date as a readable string.
